@@ -37,6 +37,7 @@ from applications.academic_procedures.views import (get_user_semester, get_acad_
 from applications.academic_procedures.views import get_sem_courses, get_student_registrtion_check, get_cpi, academics_module_notif, get_final_registration_choices, get_currently_registered_course, get_add_course_options, get_drop_course_options, get_replace_course_options
 
 from . import serializers
+from .serializers import CourseRegistrationSerializer
 
 User = get_user_model()
 
@@ -1161,7 +1162,31 @@ def verify_course(request):
     })
 
 
-#  These apis were implemented before but now don't use them they have some errors
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def current_courseregistration(request):
+    try:
+        current_user = request.user
+        user_details = current_user.extrainfo
+
+        student = Student.objects.get(id=user_details)
+
+        current_semester = student.curr_semester_no
+
+        current_courses = course_registration.objects.filter(
+            student_id=student, semester_id__semester_no=current_semester
+        )
+        print(current_courses)
+
+        serializer = CourseRegistrationSerializer(current_courses, many=True)
+        print(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except Student.DoesNotExist:
+        return Response({"error": "Student profile not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # @api_view(['GET'])
